@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 require 'socket'
-require 'pry'
+#require 'pry'
 require 'logger'
 require 'optparse'
 require 'pathname'
@@ -30,10 +30,10 @@ class Session
 
   RESP_SUCCESS_START_RETR = "150 Opening data connection\r\n"
   RESP_SUCCESS_END_RETR = "226 Transfer complete.\r\n"
-  
-  RESP_SUCCESS_START_STOR = "150 Opening data connection\r\n" # ? not sure about the response number and content
+
+  RESP_SUCCESS_START_STOR = "150 Opening data connection\r\n"
   RESP_SUCCESS_END_STOR = "226 Transfer complete.\r\n"
-  
+
   RESP_SUCCESS_PREFIX_SIZE = "213 "
   RESP_SUCCESS_PREFIX_PWD = "257 "
   RESP_SUCCESS_PREFIX_PASV = "227 Entering passive mode "
@@ -53,9 +53,9 @@ class Session
 
   def welcome
     send_msg(RESP_SUCCESS_ACCEPT)
-    @session_state = STATE_INIT 
+    @session_state = STATE_INIT
   end
-  
+
   def handle_client
     loop do
       cmd_read = @socket_cmd.recv(4096)
@@ -76,7 +76,7 @@ class Session
   def close
     p "session #{self} close" # ? should do sth. else?
   end
-  
+
   def process_cmd(_cmd)
     #binding.pry
     cmd, arg = _cmd.split(" ")
@@ -105,7 +105,7 @@ class Session
       process_QUIT cmd, arg
     else
       @logger.info("unsupported command #{cmd}")
-      send_msg(RESP_FAIL_PREFIX_NOSUPPORT + RESP_SUFFIX) 
+      send_msg(RESP_FAIL_PREFIX_NOSUPPORT + RESP_SUFFIX)
     end
 
   end
@@ -126,7 +126,7 @@ class Session
       p "alread logged in" # ?
     end
   end
-  
+
   def process_PASS(cmd, arg)
     @logger.info("Recv cmd: " + cmd + " " + arg.to_s)
     if @session_state == STATE_USER
@@ -139,7 +139,7 @@ class Session
 
   def process_PASV(cmd, arg)
     begin
-    
+
      @logger.info("Recv cmd: " + cmd + " " + arg.to_s)
     if @session_state == STATE_LOGIN
        @logger.info("Recv cmd: " + cmd + " " + arg.to_s + "in process_PASV")
@@ -156,8 +156,8 @@ class Session
       send_msg(msg)
 
       @socket_data, address = _socket.accept() # ? return a new socket again?
-      p "here1", _socket.local_address
-      p "here2", @socket_data, address
+      p "Socket listening for data connection:", _socket, _socket.local_address
+      p "Socket for data connection:", @socket_data, address
       #@socket_data.send("This message is send from data channel of server.", 0)
 
       # send the port to the client
@@ -204,7 +204,7 @@ class Session
 
       ret = File.expand_path(@dir)
       resp = "#{RESP_SUCCESS_PREFIX_PWD}\"#{ret}\"#{RESP_SUFFIX}"
-      send_msg(resp) 
+      send_msg(resp)
       @logger.info("Sent: " + resp)
       #binding.pry
     end
@@ -221,7 +221,7 @@ class Session
         @dir = File.expand_path(File.join(@dir, arg))
         p "not absolute"
       end
-      send_msg(RESP_SUCCESS_CWD) 
+      send_msg(RESP_SUCCESS_CWD)
     end
   end
   def process_SIZE(cmd, arg)
@@ -295,7 +295,7 @@ class Session
       @session_state = STATE_TRANSMITTING
       data = ""
       loop do
-        _tmp = @socket_data.recv(4096)
+        _tmp = @socket_data.recv(65536)
         if _tmp == ""
           break
         end
@@ -359,7 +359,7 @@ class FTPServer
       p 'Waiting for new connection'
       socket, address = @socket_listen.accept()
       # create a new thread here to handle the new client
-      Thread.start([@dir, self, @logger, socket, @host, address]) { |arg| 
+      Thread.start([@dir, self, @logger, socket, @host, address]) { |arg|
         dir, server, logger, socket, host, address = arg
         p @host, address
         session = Session.new(dir, server, logger, socket, host)
